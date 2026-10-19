@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gửi Ngọc - 20/10</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050011; /* Đảm bảo luôn có màu nền dự phòng */
+            background: radial-gradient(circle at center, #1a0018 0%, #050011 60%, #000000 100%);
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="heartCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let time = 0;
+
+        // 1. HỆ THỐNG SAO LẤP LÁNH
+        const backgroundStars = [];
+        for (let i = 0; i < 200; i++) {
+            backgroundStars.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                size: Math.random() * 1.5 + 0.5,
+                alpha: Math.random(),
+                flickerSpeed: Math.random() * 0.05 + 0.01
+            });
+        }
+
+        // 2. HỆ THỐNG SAO BĂNG
+        const shootingStars = [];
+        function createShootingStar() {
+            return {
+                x: Math.random() * window.innerWidth * 1.5,
+                y: Math.random() * -window.innerHeight,
+                length: Math.random() * 80 + 40,
+                speed: Math.random() * 10 + 15,
+                angle: Math.PI / 4 + Math.random() * 0.2,
+                active: false,
+                delay: Math.random() * 200 + 50
+            };
+        }
+        for (let i = 0; i < 7; i++) {
+            shootingStars.push(createShootingStar());
+        }
+
+        // 3. TOÁN HỌC TRÁI TIM
+        function heartFormula(t) {
+            const x = 16 * Math.pow(Math.sin(t), 3);
+            const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+            const scale = 17.5;
+            return { x: x * scale, y: -y * scale - 20 };
+        }
+
+        // 4. CÁC HẠT NEON ĐA SẮC
+        const neonColors = ['0, 200, 255', '255, 105, 180', '180, 0, 255']; 
+        const particles = [];
+        for (let i = 0; i < 450; i++) {
+            const t = Math.random() * Math.PI * 2;
+            const pos = heartFormula(t);
+            particles.push({
+                offsetX: pos.x + (Math.random() - 0.5) * 40, 
+                offsetY: pos.y + (Math.random() - 0.5) * 40,
+                flickerSpeed: Math.random() * 0.1 + 0.05,
+                flickerOffset: Math.random() * 100,
+                color: neonColors[Math.floor(Math.random() * neonColors.length)], 
+                isSparkle: Math.random() < 0.05 
+            });
+        }
+
+        // 5. ICON DỄ THƯƠNG
+        const cuteEmojis = ['🌸', '✨', '💖', '🎀', '🦋', '🌟'];
+        const floatingIcons = [];
+        for (let i = 0; i < 45; i++) {
+            floatingIcons.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                emoji: cuteEmojis[Math.floor(Math.random() * cuteEmojis.length)],
+                speedY: Math.random() * -1 - 0.5,
+                wobbleSpeed: Math.random() * 0.02 + 0.01,
+                wobbleOffset: Math.random() * Math.PI * 2,
+                size: Math.random() * 15 + 10
+            });
+        }
+
+        // 6. VÒNG LẶP CHUYỂN ĐỘNG
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Vẽ sao nền
+            backgroundStars.forEach(star => {
+                star.alpha = Math.abs(Math.sin(time * star.flickerSpeed));
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Vẽ sao băng
+            shootingStars.forEach(star => {
+                if (star.delay > 0) {
+                    star.delay--;
+                } else {
+                    star.active = true;
+                }
+
+                if (star.active) {
+                    star.x -= star.speed * Math.cos(star.angle);
+                    star.y += star.speed * Math.sin(star.angle);
+
+                    ctx.save();
+                    ctx.translate(star.x, star.y);
+                    ctx.rotate(star.angle);
+                    const gradient = ctx.createLinearGradient(0, 0, -star.length, 0);
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                    gradient.addColorStop(0.1, 'rgba(0, 200, 255, 0.8)');
+                    gradient.addColorStop(1, 'rgba(0, 200, 255, 0)');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(-star.length, -1.5, star.length, 3);
+                    ctx.restore();
+
+                    // Reset khi bay khuất
+                    if (star.x < -100 || star.y > canvas.height + 100) {
+                        const newStar = createShootingStar();
+                        Object.assign(star, newStar);
+                    }
+                }
+            });
+
+            // Vẽ Icon
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            floatingIcons.forEach(icon => {
+                icon.y += icon.speedY;
+                icon.x += Math.sin(time * icon.wobbleSpeed + icon.wobbleOffset) * 0.5;
+                if (icon.y < -30) {
+                    icon.y = canvas.height + 30;
+                    icon.x = Math.random() * canvas.width;
+                }
+                ctx.font = icon.size + 'px Arial';
+                ctx.globalAlpha = 0.7; 
+                ctx.fillText(icon.emoji, icon.x, icon.y);
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Vẽ trái tim
+            ctx.font = 'bold 11px Arial';
+            particles.forEach(p => {
+                let alpha = Math.abs(100 + 155 * Math.sin(time * p.flickerSpeed + p.flickerOffset)) / 255;
+                
+                if (p.isSparkle && Math.random() < 0.1) {
+                    ctx.fillStyle = `rgba(255, 255, 255, 1)`;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = "white";
+                } else {
+                    ctx.fillStyle = `rgba(${p.color}, ${alpha})`;
+                    ctx.shadowBlur = 0;
+                }
+                
+                ctx.fillText("I Love You", centerX + p.offsetX, centerY + p.offsetY);
+            });
+            ctx.shadowBlur = 0; 
+
+            // Vẽ chữ trung tâm
+            const pulse = 1.0 + 0.06 * Math.sin(time * 0.12); 
+            const glowAlpha = Math.abs(155 + 100 * Math.sin(time * 0.12)) / 255;
+
+            // Hào quang sau chữ
+            ctx.beginPath();
+            ctx.arc(centerX, centerY + 10, 150 * pulse, 0, Math.PI * 2);
+            const aura = ctx.createRadialGradient(centerX, centerY + 10, 0, centerX, centerY + 10, 150 * pulse);
+            aura.addColorStop(0, `rgba(255, 105, 180, ${glowAlpha * 0.2})`);
+            aura.addColorStop(1, 'rgba(255, 105, 180, 0)');
+            ctx.fillStyle = aura;
+            ctx.fill();
+
+            const fontSize1 = Math.min(26, canvas.width / 16);
+            const fontSize2 = Math.min(16, canvas.width / 24);
+
+            // Dòng 1
+            ctx.save();
+            ctx.translate(centerX, centerY - 30);
+            ctx.scale(pulse, pulse);
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "rgba(255, 105, 180, 1)";
+            ctx.fillStyle = `rgba(255, 255, 255, 1)`; 
+            ctx.font = `bold ${fontSize1}px Arial`;
+            ctx.fillText("ANH YÊU NGỌC NHẤT TRÊN ĐỜI", 0, 0);
+            ctx.restore();
+
+            // Dòng 2
+            ctx.save();
+            ctx.translate(centerX, centerY + 20);
+            ctx.scale(pulse, pulse);
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "rgba(0, 200, 255, 1)";
+            ctx.fillStyle = `rgba(0, 255, 255, ${glowAlpha + 0.2})`;
+            ctx.font = `bold ${fontSize2}px Arial`;
+            ctx.fillText("20/10 CHÚC EM BÉ CỦA ANH SẼ NHẬN ĐƯỢC", 0, 0);
+            ctx.restore();
+
+            // Dòng 3
+            ctx.save();
+            ctx.translate(centerX, centerY + 50);
+            ctx.scale(pulse, pulse);
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "rgba(0, 200, 255, 1)";
+            ctx.fillStyle = `rgba(0, 255, 255, ${glowAlpha + 0.2})`;
+            ctx.font = `bold ${fontSize2}px Arial`;
+            ctx.fillText("THẬT NHIỀU ĐIỀU HẠNH PHÚC NHÉ", 0, 0);
+            ctx.restore();
+
+            time += 1;
+            requestAnimationFrame(animate);
+        }
+
+        // Kích hoạt chạy ngay khi mở trang
+        window.onload = () => {
+            animate();
+        };
+    </script>
+</body>
+</html>
